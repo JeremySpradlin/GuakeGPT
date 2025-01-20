@@ -4,7 +4,8 @@ from gi.repository import Gtk, Gdk, GLib
 import time
 
 class DropdownWindow(Gtk.Window):
-    def __init__(self):
+    def __init__(self, width_percent: int = 80, height_percent: int = 50,
+                 animation_duration: int = 250, hide_on_focus_loss: bool = True):
         super().__init__(type=Gtk.WindowType.TOPLEVEL)
 
         # Window setup
@@ -14,10 +15,11 @@ class DropdownWindow(Gtk.Window):
         self.set_keep_above(True)
         self.set_type_hint(Gdk.WindowTypeHint.DOCK)
 
-        # Default settings
-        self.width_percent = 80
-        self.height_percent = 50
-        self.animation_duration = 250
+        # Store settings
+        self.width_percent = width_percent
+        self.height_percent = height_percent
+        self.animation_duration = animation_duration
+        self.hide_on_focus_loss = hide_on_focus_loss
         self.hidden = True
         self.animation_in_progress = False
 
@@ -43,8 +45,9 @@ class DropdownWindow(Gtk.Window):
         # Setup chat interface
         self.setup_chat_interface()
 
-        # Connect focus out event
-        self.connect('focus-out-event', self.on_focus_out)
+        # Connect focus out event if enabled
+        if self.hide_on_focus_loss:
+            self.connect('focus-out-event', self.on_focus_out)
 
         # Initialize animation properties
         self.current_y = -self.window_height
@@ -78,7 +81,8 @@ class DropdownWindow(Gtk.Window):
             self.input_entry.set_text("")
 
     def on_focus_out(self, widget, event):
-        self.hide_window()
+        if self.hide_on_focus_loss:
+            self.hide_window()
         return False
 
     def toggle_window(self):
