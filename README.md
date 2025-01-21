@@ -1,5 +1,8 @@
 # GuakeGPT
 
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.8%2B-blue)
+
 A GTK-based dropdown chat application that mimics Guake's dropdown terminal behavior.
 
 ## Features
@@ -12,9 +15,23 @@ A GTK-based dropdown chat application that mimics Guake's dropdown terminal beha
 - Support for multiple LLM providers (OpenAI, Anthropic)
 - Secure API key storage using system keyring
 
+## Requirements
+
+- Python 3.8 or higher
+- GTK 3.x
+- For MacOS: Homebrew package manager (https://brew.sh)
+
 ## Installation
 
-1. Install system dependencies:
+1. Create and activate a virtual environment (recommended):
+```bash
+python -m venv venv
+source venv/bin/activate  # On Linux/MacOS
+# or
+.\venv\Scripts\activate  # On Windows
+```
+
+2. Install system dependencies:
 
 ```bash
 # Ubuntu/Debian
@@ -34,7 +51,7 @@ brew install gtk+3 pygobject3 gtk-mac-integration
 brew install python-keybinder
 ```
 
-2. Install Python dependencies:
+3. Install Python dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -55,6 +72,28 @@ python -m guakegpt.cli
 - Window automatically hides when focus is lost
 - Configure LLM settings and API keys in the settings dialog (gear icon)
 
+## Configuration
+
+The configuration file is stored at `~/.config/guakegpt/config.json` and contains the following settings:
+
+```json
+{
+    "window": {
+        "width": 800,
+        "height": 600,
+        "animation_duration": 200,
+        "hotkey": "F12"
+    },
+    "llm": {
+        "provider": "anthropic",
+        "model": "claude-3-opus-20240229"
+    }
+}
+```
+
+### Customizing Hotkeys
+The default hotkey (F12) can be changed in the settings dialog or by editing the config file. Valid hotkeys include function keys (F1-F12) and key combinations (e.g., "<Ctrl>space").
+
 ## Security
 
 - API keys are stored securely in the system keyring
@@ -62,6 +101,12 @@ python -m guakegpt.cli
 - Configuration is stored in `~/.config/guakegpt/config.json`
 - Each LLM provider's API key is stored separately
 - No API keys or sensitive data are included in logs or error messages
+
+## Known Issues
+
+- MacOS: Some keyboard shortcuts may conflict with system shortcuts
+- Linux: On some window managers, the window may not slide smoothly
+- The window may not hide properly when using multiple monitors
 
 ## Development
 
@@ -72,4 +117,16 @@ The application is structured as follows:
   - `ui/`: User interface components
   - `llm/`: LLM client implementations
   - `config/`: Configuration management
-- `requirements.txt`: Python dependencies 
+- `requirements.txt`: Python dependencies
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details. 
