@@ -54,6 +54,8 @@ class SettingsDialog(Gtk.Dialog):
         hotkey_label = Gtk.Label(label="Toggle Hotkey")
         self.hotkey_entry = Gtk.Entry()
         self.hotkey_entry.set_text(settings.hotkey)
+        self.hotkey_entry.set_sensitive(False)
+        self.hotkey_entry.set_tooltip_text("Hotkey customization is not available yet")
         grid.attach(hotkey_label, 0, 3, 1, 1)
         grid.attach(self.hotkey_entry, 1, 3, 1, 1)
         

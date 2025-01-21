@@ -25,6 +25,7 @@ class GuakeGPT:
         # Connect to window's settings events
         self.window.connect('settings-opened', self.on_settings_opened)
         self.window.connect('settings-closed', self.on_settings_closed)
+        self.window.on_settings_changed = self.on_settings_changed
         
         # Initialize keybinder
         print(f"Setting up global hotkey ({self.settings.hotkey})...")
