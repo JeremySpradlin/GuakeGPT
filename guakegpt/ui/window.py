@@ -102,6 +102,7 @@ class DropdownWindow(Gtk.Window):
         # Message input area
         input_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.input_entry = Gtk.Entry()
+        self.input_entry.set_placeholder_text("Type your message here...")  # Add placeholder text
         self.input_entry.connect('activate', self.on_send_message)  # Send on Enter
         send_button = Gtk.Button.new_with_label("Send")
         send_button.connect('clicked', self.on_send_message)
@@ -237,7 +238,14 @@ class DropdownWindow(Gtk.Window):
         """Handle sending a message"""
         message = self.input_entry.get_text()
         if message:
+            # Get current timestamp
+            timestamp = time.strftime("%H:%M:%S")
+            
+            # Update chat buffer
             end_iter = self.chat_buffer.get_end_iter()
-            self.chat_buffer.insert(end_iter, f"You: {message}\n")
-            print(f"Message sent: {message}")  # Log message to console
+            self.chat_buffer.insert(end_iter, f"[{timestamp}] You: {message}\n")
+            
+            # Log to console with timestamp
+            print(f"[{timestamp}] Message sent: {message}")
+            
             self.input_entry.set_text("") 
