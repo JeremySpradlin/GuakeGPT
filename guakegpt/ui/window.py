@@ -151,6 +151,8 @@ class DropdownWindow(Gtk.Window):
             self.show_all()
             self.hidden = False
             self.target_y = 0  # Animate down to visible
+            # Set focus to input entry when window shows
+            self.input_entry.grab_focus()
             if self.settings_dialog:
                 self.settings_dialog.present()
         else:
@@ -237,4 +239,5 @@ class DropdownWindow(Gtk.Window):
         if message:
             end_iter = self.chat_buffer.get_end_iter()
             self.chat_buffer.insert(end_iter, f"You: {message}\n")
+            print(f"Message sent: {message}")  # Log message to console
             self.input_entry.set_text("") 
