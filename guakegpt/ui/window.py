@@ -2,8 +2,11 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib, GObject
 import time
+import asyncio
+from typing import List, Optional
 
 from guakegpt.ui.settings_dialog import SettingsDialog
+from guakegpt.llm import LLMClient, Message, Role
 
 class DropdownWindow(Gtk.Window):
     __gsignals__ = {
@@ -33,6 +36,8 @@ class DropdownWindow(Gtk.Window):
         self.animation_in_progress = False  # Prevent multiple animations running simultaneously
         self.settings_dialog = None  # Track settings dialog state
         self.on_settings_changed = None  # Callback for when settings are changed
+        self.llm_client: Optional[LLMClient] = None
+        self.message_history: List[Message] = []
 
         # Initialize window dimensions based on screen size
         self.update_screen_dimensions()
@@ -60,6 +65,13 @@ class DropdownWindow(Gtk.Window):
 
         # Setup chat interface with message history and input
         self.setup_chat_interface()
+
+    def set_llm_client(self, client: LLMClient):
+        self.llm_client = client
+        if client.settings.llm.system_prompt:
+            self.message_history = [Message(Role.SYSTEM, client.settings.llm.system_prompt)]
+        else:
+            self.message_history = []
 
     def update_screen_dimensions(self):
         """Get the primary monitor dimensions for window sizing"""
@@ -102,8 +114,8 @@ class DropdownWindow(Gtk.Window):
         # Message input area
         input_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.input_entry = Gtk.Entry()
-        self.input_entry.set_placeholder_text("Type your message here...")  # Add placeholder text
-        self.input_entry.connect('activate', self.on_send_message)  # Send on Enter
+        self.input_entry.set_placeholder_text("Type your message here...")
+        self.input_entry.connect('activate', self.on_send_message)
         send_button = Gtk.Button.new_with_label("Send")
         send_button.connect('clicked', self.on_send_message)
 
@@ -195,13 +207,21 @@ class DropdownWindow(Gtk.Window):
 
     def get_settings(self):
         """Get current window settings"""
-        from guakegpt.config.settings import Settings
+        from guakegpt.config.settings import Settings, LLMSettings
+        
+        # Use current LLM settings if available, otherwise use defaults
+        if self.llm_client:
+            llm_settings = self.llm_client.settings.llm
+        else:
+            llm_settings = LLMSettings()
+            
         return Settings(
             width_percent=self.width_percent,
             height_percent=self.height_percent,
             animation_duration=self.animation_duration,
             hotkey="F12",
-            hide_on_focus_loss=self.hide_on_focus_loss
+            hide_on_focus_loss=self.hide_on_focus_loss,
+            llm=llm_settings
         )
 
     def apply_settings(self, settings):
@@ -234,18 +254,56 @@ class DropdownWindow(Gtk.Window):
 
         self.queue_draw()
 
+    def append_message(self, message: Message):
+        """Add a message to the chat history"""
+        self.message_history.append(message)
+        
+        # Format message for display
+        role_prefix = {
+            Role.USER: "You",
+            Role.ASSISTANT: "Assistant",
+            Role.SYSTEM: "System"
+        }[message.role]
+        
+        timestamp = time.strftime("%H:%M:%S")
+        formatted_message = f"[{timestamp}] {role_prefix}: {message.content}\n"
+        
+        # Add to text buffer
+        end_iter = self.chat_buffer.get_end_iter()
+        self.chat_buffer.insert(end_iter, formatted_message)
+        
+        # Scroll to bottom
+        adj = self.chat_view.get_vadjustment()
+        adj.set_value(adj.get_upper() - adj.get_page_size())
+
+    async def send_message_async(self, message: str):
+        """Send message to LLM and handle response"""
+        if not self.llm_client:
+            self.append_message(Message(Role.SYSTEM, "Error: LLM client not configured"))
+            return
+
+        # Add user message to history
+        user_message = Message(Role.USER, message)
+        self.append_message(user_message)
+        
+        try:
+            # Get response from LLM
+            response = await self.llm_client.send_message(self.message_history)
+            
+            # Add assistant response to history
+            assistant_message = Message(Role.ASSISTANT, response)
+            self.append_message(assistant_message)
+            
+        except Exception as e:
+            error_message = Message(Role.SYSTEM, f"Error: {str(e)}")
+            self.append_message(error_message)
+
     def on_send_message(self, widget):
         """Handle sending a message"""
         message = self.input_entry.get_text()
-        if message:
-            # Get current timestamp
-            timestamp = time.strftime("%H:%M:%S")
+        if message and not message.isspace():
+            # Clear input field
+            self.input_entry.set_text("")
             
-            # Update chat buffer
-            end_iter = self.chat_buffer.get_end_iter()
-            self.chat_buffer.insert(end_iter, f"[{timestamp}] You: {message}\n")
-            
-            # Log to console with timestamp
-            print(f"[{timestamp}] Message sent: {message}")
-            
-            self.input_entry.set_text("") 
+            # Create async task for message handling
+            asyncio.create_task(self.send_message_async(message)) 

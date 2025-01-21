@@ -1,5 +1,6 @@
 # AI Logs
 .specstory/
+anthropic_key
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
