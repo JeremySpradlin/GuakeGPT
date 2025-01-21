@@ -141,7 +141,7 @@ class SettingsDialog(Gtk.Dialog):
         if active_provider == "openai":
             models = ["gpt-4", "gpt-4-turbo-preview", "gpt-3.5-turbo"]
         else:  # anthropic
-            models = ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"]
+            models = ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240229"]
         
         for model in models:
             self.model_combo.append_text(model)

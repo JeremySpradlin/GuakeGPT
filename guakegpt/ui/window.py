@@ -38,6 +38,7 @@ class DropdownWindow(Gtk.Window):
         self.on_settings_changed = None  # Callback for when settings are changed
         self.llm_client: Optional[LLMClient] = None
         self.message_history: List[Message] = []
+        self.loop = None  # Event loop for async operations
 
         # Initialize window dimensions based on screen size
         self.update_screen_dimensions()
@@ -65,6 +66,9 @@ class DropdownWindow(Gtk.Window):
 
         # Setup chat interface with message history and input
         self.setup_chat_interface()
+
+    def set_event_loop(self, loop):
+        self.loop = loop
 
     def set_llm_client(self, client: LLMClient):
         self.llm_client = client
@@ -276,28 +280,6 @@ class DropdownWindow(Gtk.Window):
         adj = self.chat_view.get_vadjustment()
         adj.set_value(adj.get_upper() - adj.get_page_size())
 
-    async def send_message_async(self, message: str):
-        """Send message to LLM and handle response"""
-        if not self.llm_client:
-            self.append_message(Message(Role.SYSTEM, "Error: LLM client not configured"))
-            return
-
-        # Add user message to history
-        user_message = Message(Role.USER, message)
-        self.append_message(user_message)
-        
-        try:
-            # Get response from LLM
-            response = await self.llm_client.send_message(self.message_history)
-            
-            # Add assistant response to history
-            assistant_message = Message(Role.ASSISTANT, response)
-            self.append_message(assistant_message)
-            
-        except Exception as e:
-            error_message = Message(Role.SYSTEM, f"Error: {str(e)}")
-            self.append_message(error_message)
-
     def on_send_message(self, widget):
         """Handle sending a message"""
         message = self.input_entry.get_text()
@@ -305,5 +287,24 @@ class DropdownWindow(Gtk.Window):
             # Clear input field
             self.input_entry.set_text("")
             
-            # Create async task for message handling
-            asyncio.create_task(self.send_message_async(message)) 
+            # Add user message immediately
+            user_message = Message(Role.USER, message)
+            self.append_message(user_message)
+            
+            # Create async task for getting response
+            if self.loop:
+                asyncio.run_coroutine_threadsafe(self._get_response(message), self.loop)
+            else:
+                self.append_message(Message(Role.SYSTEM, "Error: Event loop not configured"))
+
+    async def _get_response(self, message: str):
+        """Get response from LLM"""
+        if not self.llm_client:
+            GLib.idle_add(self.append_message, Message(Role.SYSTEM, "Error: LLM client not configured"))
+            return
+
+        try:
+            response = await self.llm_client.send_message(self.message_history)
+            GLib.idle_add(self.append_message, Message(Role.ASSISTANT, response))
+        except Exception as e:
+            GLib.idle_add(self.append_message, Message(Role.SYSTEM, f"Error: {str(e)}")) 

@@ -19,6 +19,15 @@ class LLMSettings:
 
     @classmethod
     def from_dict(cls, data: dict) -> 'LLMSettings':
+        # Handle model name migration for Anthropic models
+        if data.get("provider") == "anthropic":
+            model = data.get("model", "")
+            if model == "claude-3-opus":
+                data["model"] = "claude-3-opus-20240229"
+            elif model == "claude-3-sonnet":
+                data["model"] = "claude-3-sonnet-20240229"
+            elif model == "claude-3-haiku":
+                data["model"] = "claude-3-haiku-20240229"
         return cls(**data)
 
 @dataclass

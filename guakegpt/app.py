@@ -6,6 +6,7 @@ from gi.repository import Gtk, Gdk, GLib, Keybinder
 import asyncio
 import signal
 import sys
+import threading
 from typing import Optional
 
 from guakegpt.ui.window import DropdownWindow
@@ -23,14 +24,25 @@ class GuakeGPT:
         )
         self.llm_client: Optional[LLMClient] = None
         
+        # Setup async event loop
+        self.loop = asyncio.new_event_loop()
+        self.loop_thread = threading.Thread(target=self._run_event_loop, daemon=True)
+        self.loop_thread.start()
+        
         # Setup window callbacks
         self.window.on_settings_changed = self.on_settings_changed
+        self.window.set_event_loop(self.loop)
         
         # Initialize LLM client if API key is configured
         self.setup_llm_client()
         
         # Setup keyboard shortcut
         self.setup_keyboard_shortcut()
+
+    def _run_event_loop(self):
+        """Run the event loop in a separate thread"""
+        asyncio.set_event_loop(self.loop)
+        self.loop.run_forever()
 
     def setup_llm_client(self):
         api_key = self.settings.api_key
@@ -67,14 +79,16 @@ class GuakeGPT:
         # Setup signal handlers
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, self.on_sigint)
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, self.on_sigint)
-        
-        # Create event loop
-        loop = asyncio.get_event_loop()
-        
+
         try:
             Gtk.main()
         except KeyboardInterrupt:
             self.on_sigint()
+        finally:
+            # Clean up the event loop
+            self.loop.call_soon_threadsafe(self.loop.stop)
+            self.loop_thread.join(timeout=1.0)
+            self.loop.close()
 
     def on_sigint(self, *args):
         Gtk.main_quit()
