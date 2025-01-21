@@ -7,14 +7,35 @@ import asyncio
 import signal
 import sys
 import threading
+import logging
+from pathlib import Path
 from typing import Optional
 
 from guakegpt.ui.window import DropdownWindow
 from guakegpt.config.settings import Settings, KEYRING_SERVICE
 from guakegpt.llm import LLMClient
 
+# Setup logging
+def setup_logging():
+    log_dir = Path.home() / ".config" / "guakegpt" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "guakegpt.log"
+    
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+
 class GuakeGPT:
     def __init__(self):
+        setup_logging()
+        logger = logging.getLogger(__name__)
+        logger.info("Initializing GuakeGPT")
+        
         self.settings = Settings.load()
         self.window = DropdownWindow(
             width_percent=self.settings.width_percent,

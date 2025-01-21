@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from guakegpt.ui.settings_dialog import SettingsDialog
 from guakegpt.llm import LLMClient, Message, Role
+from guakegpt.ui.rich_text import RichTextView
 
 class DropdownWindow(Gtk.Window):
     __gsignals__ = {
@@ -108,10 +109,7 @@ class DropdownWindow(Gtk.Window):
         # Message history view
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        self.chat_buffer = Gtk.TextBuffer()
-        self.chat_view = Gtk.TextView(buffer=self.chat_buffer)
-        self.chat_view.set_editable(False)
-        self.chat_view.set_wrap_mode(Gtk.WrapMode.WORD)
+        self.chat_view = RichTextView()
         scrolled.add(self.chat_view)
         self.main_box.pack_start(scrolled, True, True, 0)
 
@@ -270,11 +268,20 @@ class DropdownWindow(Gtk.Window):
         }[message.role]
         
         timestamp = time.strftime("%H:%M:%S")
-        formatted_message = f"[{timestamp}] {role_prefix}: {message.content}\n"
+        formatted_message = f"### [{timestamp}] {role_prefix}:\n\n{message.content}\n\n"
         
-        # Add to text buffer
-        end_iter = self.chat_buffer.get_end_iter()
-        self.chat_buffer.insert(end_iter, formatted_message)
+        # Get current content and append new message
+        current_text = self.chat_view.get_buffer().get_text(
+            self.chat_view.get_buffer().get_start_iter(),
+            self.chat_view.get_buffer().get_end_iter(),
+            True
+        )
+        
+        if current_text:
+            formatted_message = current_text + "\n" + formatted_message
+        
+        # Set markdown content
+        self.chat_view.set_markdown(formatted_message)
         
         # Scroll to bottom
         adj = self.chat_view.get_vadjustment()
